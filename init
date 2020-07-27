@@ -30,18 +30,21 @@ get_iso_build_date () {
 init_archzfs () {
 
     print "Adding archzfs repo"
-    
-    pacman -Sy archlinux-keyring --noconfirm &>/dev/null
-    pacman-key --populate archlinux &>/dev/null
-    pacman-key --recv-keys F75D9D76 --keyserver hkp://pool.sks-keyservers.net:80 &>/dev/null
-    pacman-key --lsign-key F75D9D76 &>/dev/null
-    cat >> /etc/pacman.conf <<"EOF"
-[archzfs]
-Server = http://archzfs.com/archzfs/x86_64
-Server = http://mirror.sum7.eu/archlinux/archzfs/archzfs/x86_64
-Server = https://mirror.biocrafting.net/archlinux/archzfs/archzfs/x86_64
-EOF
-    pacman -Sy > /dev/null
+    if  ! grep /etc/pacman.conf ^\[archzfs
+    then
+
+        pacman -Sy archlinux-keyring --noconfirm &>/dev/null
+        pacman-key --populate archlinux &>/dev/null
+        pacman-key --recv-keys F75D9D76 --keyserver hkp://pool.sks-keyservers.net:80 &>/dev/null
+        pacman-key --lsign-key F75D9D76 &>/dev/null
+        cat >> /etc/pacman.conf <<-EOF
+        [archzfs]
+        Server = http://archzfs.com/archzfs/x86_64
+        Server = http://mirror.sum7.eu/archlinux/archzfs/archzfs/x86_64
+        Server = https://mirror.biocrafting.net/archlinux/archzfs/archzfs/x86_64
+        EOF
+        pacman -Sy > /dev/null
+    fi
 }
 
 init_archlinux_archive () {
@@ -105,14 +108,13 @@ download_package () {
 # It returns downloaded file path
 
     local filename="${1##*/}"
+    print "Downloading to $package_file ..."
 
     # Download package in tmp
-    wget "$1" --quiet -P /tmp
+    curl -so /tmp/$filename $1
 
     # Set out file
     package_file="/tmp/$filename"
-
-    print "Downloading to $package_file ..."
 }
 
 ### Main
@@ -158,10 +160,12 @@ then
     then
 
         print "Installing zfs-utils and zfs-linux"
-
+        local zfs_utils_file=$(download_package "$zfs_utils_url")
+        local zfs_linux_file=$(download_package "$zfs_linux_package")
         # Install packages
-        pacman -U "$zfs_utils_url" --noconfirm &> /dev/null
-        pacman -U "$zfs_linux_package" --noconfirm > /dev/null && zfs=1
+        pacman -U $zfs_utils_file --noconfirm &> /dev/null
+        pacman -U $zfs_linux_file --noconfirm > /dev/null && zfs=1
+        rm $zfs_utils_file $zfs_linux_file
     fi
 fi
 
