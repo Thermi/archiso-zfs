@@ -47,6 +47,12 @@ init_archzfs () {
     fi
 }
 
+fix_reflector_unit() {
+    sed -i 's/age 1/age 4/g' /etc/systemd/system/reflector.service
+    systemctl daemon-reload
+    systemctl restart reflector
+}
+
 init_archlinux_archive () {
 # $1 is date formated as 'YYYY/MM/DD'
 # Returns False if repo does not exists
@@ -127,8 +133,13 @@ print "Increasing cowspace to half of RAM"
 
 mount -o remount,size=50% /run/archiso/cowspace
 
+
+# fix and restart reflector
+fix_reflector_unit
+
 # Init archzfs repository
 init_archzfs
+
 
 # Search kernel package
 # https://github.com/archzfs/archzfs/issues/337#issuecomment-624312576
